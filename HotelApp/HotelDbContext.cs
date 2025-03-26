@@ -13,7 +13,7 @@ namespace HotelApp
         //  databasen och anslutning
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            // Ansluter till SQL Server 
+            
             optionsBuilder.UseSqlServer(
                 "Server=localhost;Database=HotelDB;Trusted_Connection=True;TrustServerCertificate=True;",
                 options => options.EnableRetryOnFailure());
