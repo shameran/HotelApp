@@ -1,3 +1,5 @@
+Use HotelDB
+
 SELECT Id, Name, Email, City
 FROM Customers
 ORDER BY Name ASC;
