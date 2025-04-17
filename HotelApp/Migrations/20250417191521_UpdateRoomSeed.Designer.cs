@@ -4,6 +4,7 @@ using HotelApp;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace HotelApp.Migrations
 {
     [DbContext(typeof(HotelDbContext))]
-    partial class HotelDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250417191521_UpdateRoomSeed")]
+    partial class UpdateRoomSeed
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -155,34 +158,34 @@ namespace HotelApp.Migrations
                         new
                         {
                             Id = 1,
-                            Capacity = 2,
-                            PricePerNight = 151m,
-                            RoomNumber = "01",
-                            RoomType = "Double"
+                            Capacity = 1,
+                            PricePerNight = 101m,
+                            RoomNumber = "101",
+                            RoomType = "Single"
                         },
                         new
                         {
                             Id = 2,
-                            Capacity = 1,
-                            PricePerNight = 101m,
-                            RoomNumber = "02",
-                            RoomType = "Single"
+                            Capacity = 2,
+                            PricePerNight = 151m,
+                            RoomNumber = "102",
+                            RoomType = "Double"
                         },
                         new
                         {
                             Id = 3,
-                            Capacity = 1,
-                            PricePerNight = 101m,
-                            RoomNumber = "03",
-                            RoomType = "Single"
+                            Capacity = 4,
+                            PricePerNight = 251m,
+                            RoomNumber = "103",
+                            RoomType = "Suite"
                         },
                         new
                         {
                             Id = 4,
-                            Capacity = 4,
-                            PricePerNight = 251m,
-                            RoomNumber = "04",
-                            RoomType = "Suite"
+                            Capacity = 1,
+                            PricePerNight = 101m,
+                            RoomNumber = "104",
+                            RoomType = "Single"
                         });
                 });
 

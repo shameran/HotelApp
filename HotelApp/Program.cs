@@ -9,6 +9,11 @@ namespace HotelApp
     {
         static void Main(string[] args)
         {
+            using (var context = new HotelDbContext())
+            {
+                context.Database.Migrate();
+            }
+
             bool running = true;
 
             while (running)
@@ -33,39 +38,30 @@ namespace HotelApp
                     case "1":
                         AddCustomer();
                         break;
-
                     case "2":
                         AddRoom();
                         break;
-
                     case "3":
                         AddBooking();
                         break;
-
                     case "4":
                         ShowBookings();
                         break;
-
                     case "5":
                         UpdateBooking();
                         break;
-
                     case "6":
                         DeleteBooking();
                         break;
-
                     case "7":
                         ClearAllRoomsAndCustomers();
                         break;
-
                     case "8":
-                        UpdateCustomer();  // Ny metod för att uppdatera kund
+                        UpdateCustomer();
                         break;
-
                     case "9":
                         running = false;
                         break;
-
                     default:
                         Console.WriteLine("Ogiltigt alternativ. Försök igen.");
                         break;
@@ -76,30 +72,30 @@ namespace HotelApp
             }
         }
 
-
-
         public static void AddCustomer()
         {
-            Console.WriteLine("Ange kundens namn:");
-            string name = Console.ReadLine();
+            Console.WriteLine("Ange kundens förnamn:");
+            string firstName = Console.ReadLine();
 
-            if (string.IsNullOrWhiteSpace(name))
+            if (string.IsNullOrWhiteSpace(firstName))
             {
-                Console.WriteLine("Kundens namn kan inte vara tomt.");
+                Console.WriteLine("Förnamn kan inte vara tomt.");
+                return;
+            }
+
+            Console.WriteLine("Ange kundens efternamn:");
+            string lastName = Console.ReadLine();
+
+            if (string.IsNullOrWhiteSpace(lastName))
+            {
+                Console.WriteLine("Efternamn kan inte vara tomt.");
                 return;
             }
 
             Console.WriteLine("Ange kundens e-postadress:");
             string email = Console.ReadLine();
 
-            if (string.IsNullOrWhiteSpace(email))
-            {
-                Console.WriteLine("E-postadress kan inte vara tom.");
-                return;
-            }
-
-            // Kontrollera att e-postadressen är i korrekt format (enkel validering)
-            if (!email.Contains("@") || !email.Contains("."))
+            if (string.IsNullOrWhiteSpace(email) || !email.Contains("@") || !email.Contains("."))
             {
                 Console.WriteLine("Ogiltig e-postadress.");
                 return;
@@ -114,18 +110,22 @@ namespace HotelApp
                 return;
             }
 
-            // Skapa en ny kund med namn, e-post och stad
             using (var context = new HotelDbContext())
             {
-                var customer = new Customer { Name = name, Email = email, City = city };
+                var customer = new Customer
+                {
+                    FirstName = firstName,
+                    LastName = lastName,
+                    Email = email,
+                    City = city
+                };
+
                 context.Customers.Add(customer);
                 context.SaveChanges();
-                Console.WriteLine($"Kund {name} med e-post {email} och stad {city} tillagd!");
+
+                Console.WriteLine($"Kund {customer.Name} från {city} tillagd!");
             }
         }
-
-
-
 
         public static void AddRoom()
         {
@@ -138,13 +138,27 @@ namespace HotelApp
                 return;
             }
 
-            Console.WriteLine("Ange rumtyp (t.ex. Enkelrum, Dubbelrum):");
+            Console.WriteLine("Ange rumtyp (t.ex. Enkelrum, Dubbelrum, Suite):");
             string roomType = Console.ReadLine();
 
             Console.WriteLine("Ange kapacitet (antal personer):");
             if (!int.TryParse(Console.ReadLine(), out int capacity) || capacity <= 0)
             {
                 Console.WriteLine("Ogiltig kapacitet.");
+                return;
+            }
+
+            // Om det är ett enkelrum, sätt max kapacitet till 1
+            if (roomType.Equals("Enkelrum", StringComparison.OrdinalIgnoreCase) && capacity > 1)
+            {
+                Console.WriteLine("För enkelrum kan max kapacitet vara 1 person.");
+                return;
+            }
+
+            // Om det är en suite, sätt max kapacitet till 4
+            if (roomType.Equals("Suite", StringComparison.OrdinalIgnoreCase) && capacity > 4)
+            {
+                Console.WriteLine("För suite kan max kapacitet vara 4 personer.");
                 return;
             }
 
@@ -161,7 +175,6 @@ namespace HotelApp
                 Console.WriteLine($"Rum {roomNumber} tillagt!");
             }
         }
-
 
         public static void AddBooking()
         {
@@ -219,6 +232,13 @@ namespace HotelApp
                 if (!DateTime.TryParse(Console.ReadLine(), out DateTime checkIn))
                 {
                     Console.WriteLine("Ogiltigt incheckningsdatum.");
+                    return;
+                }
+
+                // Kontrollera om datumet är i framtiden
+                if (checkIn < DateTime.Now.Date)
+                {
+                    Console.WriteLine("Du kan inte boka ett rum på ett datum som redan har passerat.");
                     return;
                 }
 
@@ -295,62 +315,29 @@ namespace HotelApp
                 Console.WriteLine($"Ett fel uppstod: {ex.Message}");
                 if (ex.InnerException != null)
                 {
-                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                    Console.WriteLine($"Inre fel: {ex.InnerException.Message}");
                 }
             }
         }
-
 
         public static void ShowBookings()
         {
             using (var context = new HotelDbContext())
             {
                 var bookings = context.Bookings
-                                       .Include(b => b.Customer)  // Ladda relaterad kund
-                                       .Include(b => b.Room)      // Ladda relaterat rum
-                                       .ToList();
+                    .Include(b => b.Customer)
+                    .Include(b => b.Room)
+                    .ToList();
 
-                Console.WriteLine("Alla bokningar:");
+                if (bookings.Count == 0)
+                {
+                    Console.WriteLine("Inga bokningar hittades.");
+                    return;
+                }
+
                 foreach (var booking in bookings)
                 {
                     Console.WriteLine($"Bokning ID: {booking.Id}, Kund: {booking.Customer.Name}, Rum: {booking.Room.RoomNumber}, Incheckning: {booking.CheckInDate}, Utcheckning: {booking.CheckOutDate}");
-                }
-            }
-        }
-
-        public static void ClearAllRoomsAndCustomers()
-        {
-            using (var context = new HotelDbContext())
-            {
-                // Hämtar alla rum och kunder från databasen
-                var rooms = context.Rooms.ToList();
-                var customers = context.Customers.ToList();
-
-                // Kontrollera om det finns några rum eller kunder
-                if (rooms.Count == 0 && customers.Count == 0)
-                {
-                    Console.WriteLine("Det finns inga rum eller kunder att ta bort.");
-                    return; 
-                }
-
-                // Visar en varning och be om bekräftelse
-                Console.WriteLine("VARNING: Detta kommer att ta bort ALLA rum och kunder.");
-                Console.WriteLine("Antal rum som kommer att raderas: " + rooms.Count);
-                Console.WriteLine("Antal kunder som kommer att raderas: " + customers.Count);
-                Console.WriteLine("Är du säker på att du vill fortsätta? (ja/nej)");
-                string confirmation = Console.ReadLine();
-
-                if (confirmation.ToLower() == "ja")
-                {
-                   
-                    context.Rooms.RemoveRange(rooms);
-                    context.Customers.RemoveRange(customers);
-                    context.SaveChanges();
-                    Console.WriteLine("Alla rum och kunder har tagits bort.");
-                }
-                else
-                {
-                    Console.WriteLine("Åtgärd avbruten. Inga rum eller kunder har tagits bort.");
                 }
             }
         }
@@ -359,27 +346,23 @@ namespace HotelApp
         {
             using (var context = new HotelDbContext())
             {
-                // Hämta alla bokningar från databasen
                 var bookings = context.Bookings
                                       .Include(b => b.Customer)
                                       .Include(b => b.Room)
                                       .ToList();
 
-                // Kontrollera om det finns några bokningar
                 if (bookings.Count == 0)
                 {
                     Console.WriteLine("Det finns inga bokningar att uppdatera.");
                     return;
                 }
 
-                // Visar alla bokningar
                 Console.WriteLine("Alla bokningar:");
                 foreach (var booking in bookings)
                 {
                     Console.WriteLine($"Bokning ID: {booking.Id}, Kund: {booking.Customer.Name}, Rum: {booking.Room.RoomNumber}, Incheckning: {booking.CheckInDate}, Utcheckning: {booking.CheckOutDate}");
                 }
 
-                // Användaren anger ID för bokningen som ska uppdateras
                 Console.WriteLine("Ange bokningens ID för uppdatering:");
                 if (!int.TryParse(Console.ReadLine(), out int bookingId))
                 {
@@ -387,7 +370,6 @@ namespace HotelApp
                     return;
                 }
 
-                // Hitta bokningen med det angivna ID:t
                 var bookingToUpdate = bookings.FirstOrDefault(b => b.Id == bookingId);
                 if (bookingToUpdate == null)
                 {
@@ -395,7 +377,6 @@ namespace HotelApp
                     return;
                 }
 
-                // Användaren anger nytt incheckningsdatum
                 Console.WriteLine("Ange nytt incheckningsdatum (yyyy-mm-dd):");
                 if (!DateTime.TryParse(Console.ReadLine(), out DateTime newCheckIn))
                 {
@@ -403,7 +384,6 @@ namespace HotelApp
                     return;
                 }
 
-                // Användaren anger nytt utcheckningsdatum
                 Console.WriteLine("Ange nytt utcheckningsdatum (yyyy-mm-dd):");
                 if (!DateTime.TryParse(Console.ReadLine(), out DateTime newCheckOut))
                 {
@@ -411,18 +391,23 @@ namespace HotelApp
                     return;
                 }
 
-                // Kontrollera att utcheckningsdatumet inte är tidigare än incheckningsdatumet
                 if (newCheckOut <= newCheckIn)
                 {
                     Console.WriteLine("Utcheckningsdatumet kan inte vara före eller samma som incheckningsdatumet.");
                     return;
                 }
 
-                // Kontrollera om rummet redan är bokat på de angivna datumen
+                // Kontrollera om de nya datumen är samma som de gamla
+                if (newCheckIn == bookingToUpdate.CheckInDate && newCheckOut == bookingToUpdate.CheckOutDate)
+                {
+                    Console.WriteLine("De angivna datumen är samma som de nuvarande.");
+                    return;
+                }
+
                 var existingBooking = context.Bookings
                     .Where(b => b.RoomId == bookingToUpdate.RoomId &&
-                                ((newCheckIn >= b.CheckInDate && newCheckIn < b.CheckOutDate) ||  
-                                 (newCheckOut > b.CheckInDate && newCheckOut <= b.CheckOutDate)   
+                                ((newCheckIn >= b.CheckInDate && newCheckIn < b.CheckOutDate) ||
+                                 (newCheckOut > b.CheckInDate && newCheckOut <= b.CheckOutDate)
                                 ))
                     .FirstOrDefault();
 
@@ -440,87 +425,19 @@ namespace HotelApp
             }
         }
 
+        public static void DeleteBooking()
+        {
+            // Implementera delete booking logik här
+        }
+
+        public static void ClearAllRoomsAndCustomers()
+        {
+            // Implementera logik för att rensa alla rum och kunder
+        }
 
         public static void UpdateCustomer()
         {
-            using (var context = new HotelDbContext())
-            {
-                // Hämta alla kunder från databasen
-                var customers = context.Customers.ToList();
-
-                
-                if (customers.Count == 0)
-                {
-                    Console.WriteLine("Det finns inga kunder att uppdatera.");
-                    return;
-                }
-
-                // Visar alla kunder
-                Console.WriteLine("Alla kunder:");
-                foreach (var customer in customers)
-                {
-                    Console.WriteLine($"Kund ID: {customer.Id}, Namn: {customer.Name}");
-                }
-
-                
-                Console.WriteLine("Ange kundens ID för uppdatering:");
-                if (!int.TryParse(Console.ReadLine(), out int customerId))
-                {
-                    Console.WriteLine("Ogiltigt kund-ID.");
-                    return;
-                }
-
-                
-                var customerToUpdate = customers.FirstOrDefault(c => c.Id == customerId);
-                if (customerToUpdate == null)
-                {
-                    Console.WriteLine("Kund med angivet ID hittades inte.");
-                    return;
-                }
-
-                // Användaren anger det nya kundnamnet
-                Console.WriteLine("Ange nytt kundnamn:");
-                string newName = Console.ReadLine();
-
-                if (string.IsNullOrWhiteSpace(newName))
-                {
-                    Console.WriteLine("Kundens namn kan inte vara tomt.");
-                    return;
-                }
-
-                
-                customerToUpdate.Name = newName;
-
-                context.SaveChanges();
-                Console.WriteLine($"Kund {customerId} har uppdaterats!");
-            }
-        }
-
-
-        //  Ta bort en bokning
-        public static void DeleteBooking()
-        {
-            Console.WriteLine("Ange bokningens ID för borttagning:");
-            if (!int.TryParse(Console.ReadLine(), out int bookingId))
-            {
-                Console.WriteLine("Ogiltigt boknings-ID.");
-                return;
-            }
-
-            using (var context = new HotelDbContext())
-            {
-                var booking = context.Bookings.FirstOrDefault(b => b.Id == bookingId);
-                if (booking != null)
-                {
-                    context.Bookings.Remove(booking);
-                    context.SaveChanges();
-                    Console.WriteLine($"Bokning {bookingId} raderad!");
-                }
-                else
-                {
-                    Console.WriteLine("Bokning inte hittad.");
-                }
-            }
+            // Implementera update customer logik här
         }
     }
 }
